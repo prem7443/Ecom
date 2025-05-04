@@ -1,35 +1,31 @@
-name: Push-to-EC2
+- name: SSH and deploy on EC2
 
-# Trigger deployment only on push to main branch
 on:
   push:
     branches:
       - main
+      - test1
+      - test2
 
-jobs:
-  deploy:
-    name: Deploy to EC2 on master branch push
-    runs-on: ubuntu-latest
+  
+  with:
+    host: ${{ secrets.HOST_DNS }}
+    username: ${{ secrets.USERNAME }}
+    key: ${{ secrets.EC2_SSH_KEY }}
+    script: |
+      # Copy index.php into each test folder
+      cp /home/ubuntu/index.php /home/ubuntu/test1/index.php
+      cp /home/ubuntu/index.php /home/ubuntu/test2/index.php
+      cp /home/ubuntu/index.php /home/ubuntu/test3/index.php
 
-    steps:
-      - name: Checkout the files
-        uses: actions/checkout@v2
+      # Move the correct test folder to Apache directory
+      if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+        sudo mv /home/ubuntu/test1 /var/www/html/test1
+      elif [[ "${GITHUB_REF##*/}" == "test" ]]; then
+        sudo mv /home/ubuntu/test2 /var/www/html/test2
+      elif [[ "${GITHUB_REF##*/}" == "test2" ]]; then
+        sudo mv /home/ubuntu/test3 /var/www/html/test3
+      fi
 
-      - name: Deploy to Server 1
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.HOST_DNS }}
-          REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ${{ secrets.TARGET_DIR }}
-
-      - name: Executing remote ssh commands using ssh key
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            
-            cd home
-            sudo mv * /var/www/html
+      # Restart Apache
+      sudo systemctl restart apache2
