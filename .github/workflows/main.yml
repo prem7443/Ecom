@@ -15,6 +15,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
+      - name: Upload files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "."
+          target: "/home/ubuntu/"
+
       - name: SSH and deploy on EC2
         uses: appleboy/ssh-action@master
         with:
@@ -22,19 +31,16 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Copy index.php into each test folder
             cp /home/ubuntu/index.php /home/ubuntu/test1/index.php
             cp /home/ubuntu/index.php /home/ubuntu/test2/index.php
             cp /home/ubuntu/index.php /home/ubuntu/test3/index.php
 
-            # Move the correct test folder to Apache directory
             if [[ "${GITHUB_REF##*/}" == "main" ]]; then
-              sudo mv /home/ubuntu/test1 /var/www/html/test1
+              sudo cp -r /home/ubuntu/test1 /var/www/html/test1
             elif [[ "${GITHUB_REF##*/}" == "test1" ]]; then
-              sudo mv /home/ubuntu/test2 /var/www/html/test2
+              sudo cp -r /home/ubuntu/test2 /var/www/html/test2
             elif [[ "${GITHUB_REF##*/}" == "test2" ]]; then
-              sudo mv /home/ubuntu/test3 /var/www/html/test3
+              sudo cp -r /home/ubuntu/test3 /var/www/html/test3
             fi
 
-            # Restart Apache
             sudo systemctl restart apache2
