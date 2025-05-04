@@ -159,7 +159,7 @@ getcategories();
 
   
   
-<!-- last child --> 
+
 <!-- include footer -->
 <?php include("./includes/footer.php") ?>
   
